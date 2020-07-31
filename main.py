@@ -1,6 +1,7 @@
 import pygame
 from time import sleep
 from math import sin, cos, pi
+from copy import deepcopy
 
 pygame.init()
 pygame.display.set_caption("XXX")
@@ -11,21 +12,32 @@ screen = pygame.display.set_mode((W,H))
 
 color = (50, 50, 200)
 
-sm = 1
 sx = W//2-15
 sy = H//2+20
-svx = 0.2
-svy = 0
-sax = 0
-say = 0
-sr = 0
+
 ROT_RATE = 2*pi/100
 
-FUTURESTEPS = 10000
+FUTURESTEPS = 1000
 
-G = 1
+G = 0.01
 
-gravities = [(W//2,H//2,0.01), (W//2+100,H//2+100,0.01)]
+class Mass:
+	def __init__(self, m, x, y):
+		self.m = m
+		self.x = x
+		self.y = y
+		self.vx = 0
+		self.vy = 0
+		self.ax = 0
+		self.ay = 0
+		self.r = 0
+
+masses = [Mass(0.0001,sx,sy), Mass(0.001, W//2,H//2), Mass(0.001, W//2+100,H//2+100)]
+
+masses[1].vx = 0.005
+masses[2].vx = -0.005
+
+player = masses[0]
 
 def cap(c, v):
 	if 0 <= v < c:
@@ -35,29 +47,29 @@ def cap(c, v):
 	else:
 		return v
 
-def gravity(m,x,y,g):
-	dx = cap(1,x-g[0])
-	dy = cap(1,y-g[1])
-	#print(dx,dy)
+
+def gravity(ma,mb):
+	dx = cap(1,ma.x-mb.x)
+	dy = cap(1,ma.y-mb.y)
+
 	dist = (dx**2+dy**2)**0.5
-	#print(dist)
-	#dist = max(dist, 1)
 
-	return -dx*G*m*g[2]/dist**2, -dy*G*m*g[2]/dist**2
+	return -dx*G*ma.m*mb.m/dist**2, -dy*G*ma.m*mb.m/dist**2
 
-i = 0
+tick = 0
 running = True
 
 while running:
 
-	drawcycle = i%100 == 0
+	drawcycle = tick%100 == 0
 
 	if drawcycle:
 		screen.fill(color)
-		pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(sx, sy, 40, 30))
+		pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(player.x, player.y, 40, 30))
 
-		for g in gravities:
-			pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(g[0],g[1],10,10))
+		for mass in masses:
+			if mass != player:
+				pygame.draw.rect(screen, (0, 0, 0), pygame.Rect(mass.x,mass.y,10,10))
 
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -65,52 +77,53 @@ while running:
 		elif event.type == pygame.KEYDOWN:
 			key = event.key
 			if key == pygame.K_LEFT:
-				sr -= ROT_RATE
+				player.r -= ROT_RATE
 			elif key == pygame.K_RIGHT:
-				sr += ROT_RATE
+				player.r += ROT_RATE
 
-	x = sx
-	y = sy
-	vx = svx
-	vy = svy
+	x = player.x
+	y = player.y
+	vx = player.vx
+	vy = player.vy
 
-	r = sr
+	r = player.r
 
 	path = []
 
 	steps = FUTURESTEPS if drawcycle else 1
+
+	futuremasses = [deepcopy(mass) for mass in masses]
+
+	# TODO do not recalculate same steps!
 	for f in range(steps):
-		ax = 0#sax
-		ay = 0#say
 
-		for grav in gravities:
-			dax, day = gravity(sm,x,y,grav)
-			ax += dax#(grav[2]/cap(1, grav[0]-x))**2
-			ay += day#(grav[2]/cap(1, grav[1]-y))**2
+		for ma in futuremasses:
+			for mb in futuremasses:
+				if ma == mb:
+					continue
+				dax, day = gravity(ma,mb)
+				ma.ax += dax
+				ma.ay += day
 
-		vx += ax
-		vy += ay
+			ma.vx += ma.ax
+			ma.vy += ma.ay
 
-		x += vx
-		y += vy
+			ma.x += ma.vx
+			ma.y += ma.vy
 
-		path.append((x,y))
+		path.append((futuremasses[0].x,futuremasses[0].y))
 
 		if f == 0:
-			print(ax,ay)
-			sx = x
-			sy = y
-			svx = vx
-			svy = vy
-			sax = ax
-			say = ay
-			sr = r
+			for i,ma in enumerate(futuremasses):
+				for key in "x y vx vy ax ay r".split():
+					setattr(masses[i], key, getattr(ma,key))
 
 
 	if drawcycle:
-		pygame.draw.lines(screen, (255,255,255), False, path)
+		if len(path) > 1:
+			pygame.draw.lines(screen, (255,255,255), False, path)
 
 		pygame.display.flip()
 		sleep(0.01)
 
-	i += 1
+	tick += 1

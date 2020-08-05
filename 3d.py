@@ -35,23 +35,25 @@ class Mass:
         if dist < self.r + b.r or dist > 1000:
             return
 
-        dx = self.x-b.x
-        dy = self.y-b.y
-        dz = self.z-b.z
+        dx = b.x-self.x
+        dy = b.y-self.y
+        dz = b.z-self.z
         force = G*self.m*b.m/dist**3
-        self.ix -= force * dx
-        self.iy -= force * dy
-        self.iz -= force + dz
+        self.ix += force * dx
+        self.iy += force * dy
+        self.iz += force * dz
 
-masses = [Mass(100, -100, 0, 0), Mass(100, 100, 0, 0)]
-masses[0].vy = 5
-masses[1].vy = -5
+masses = [Mass(100, -50, 0, 0), Mass(100, 50, 0, 0)]
+masses[0].vy = 8
+masses[1].vy = -8
 
+"""
 for x in range(-5, 5):
     for y in range(-5, 5):
         masses.append(Mass(5, x, y, 0))
+"""
 
-steps = 1000
+steps = 100
 
 paths = defaultdict(list)
 

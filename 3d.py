@@ -5,8 +5,20 @@ from time import time
 
 G = 1
 
+ID = 0#should never be 0 because of if checks
+
+def nextid():
+    global ID
+    ID += 1
+    return ID
+
 class Mass:
     def __init__(self, m, x, y, z):
+
+        self.id = nextid()
+
+        self.status = None
+
         self.x = x
         self.y = y
         self.z = z
@@ -32,7 +44,12 @@ class Mass:
 
     def gravity(self, b):
         dist = self.distance(b)
-        if dist < self.r + b.r or dist > 1000:
+        if dist < self.r + b.r:
+            self.status = b.id
+            return
+
+        if dist > 1000:
+            self.status = "escape"
             return
 
         dx = b.x-self.x
@@ -43,58 +60,87 @@ class Mass:
         self.iy += force * dy
         self.iz += force * dz
 
-masses = [Mass(100, -50, 0, 0), Mass(100, 50, 0, 0)]
-masses[0].vy = 8
-masses[1].vy = -8
+
 
 """
 for x in range(-5, 5):
     for y in range(-5, 5):
-        masses.append(Mass(5, x, y, 0))
+        masses.append(Mass(1, x, y, 0))
 """
-
-steps = 100
-
-paths = defaultdict(list)
-
-for step in range(steps):
-    newmasses = []
-    for mi, mass in enumerate(masses):
-        nm = deepcopy(mass)
-
-        nm.ix = 0
-        nm.iy = 0
-        nm.iz = 0
-
-        for mass2 in masses:
-            if mass == mass2:
-                continue
-            nm.gravity(mass2)
-
-        nm.vx += nm.ax + nm.ix
-        nm.vy += nm.ay + nm.iy
-        nm.vz += nm.az + nm.iz
-
-        nm.x += nm.vx
-        nm.y += nm.vy
-        nm.z += nm.vz
-
-        newmasses.append(nm)
-
-        paths[mi].append([nm.x, nm.y])
-
-    masses = newmasses
 
 from PIL import Image, ImageDraw
 
-w = h = 512
+w = h = 64
 
 img = Image.new("RGB", (w,h))
 draw = ImageDraw.Draw(img)
 
+steps = 100
+
+#paths = defaultdict(list)
+
+for x in range(-w//2, w//2):
+    for y in range(-h//2, h//2):
+
+        print(x,y)
+
+        ID = 0
+        masses = [Mass(100, -50, 0, 0), Mass(100, 50, 0, 0)]
+        masses[0].vy = 8
+        masses[1].vy = -8
+
+        masses.append(Mass(1, x, y, 0))
+
+        for step in range(steps):
+            newmasses = []
+            for mi, mass in enumerate(masses):
+                nm = deepcopy(mass)
+
+                nm.ix = 0
+                nm.iy = 0
+                nm.iz = 0
+
+                for mass2 in masses:
+                    if mass == mass2:
+                        continue
+                    nm.gravity(mass2)
+
+                nm.vx += nm.ax + nm.ix
+                nm.vy += nm.ay + nm.iy
+                nm.vz += nm.az + nm.iz
+
+                nm.x += nm.vx
+                nm.y += nm.vy
+                nm.z += nm.vz
+
+                newmasses.append(nm)
+
+                #paths[mi].append([nm.x, nm.y])
+
+            masses = newmasses
+
+            if masses[-1].status == "escape":
+                color = (step,100,100)
+                break
+            elif masses[-1].status is not None:
+                print(masses[-1].status)
+                color = [(0,255,0), (0,0,255)][masses[-1].status-1]
+                break
+
+        if step == steps-1:
+            color = (30,30,30)
+
+        img.putpixel((x+w//2,y+h//2), color)
+
+
+
+"""
 for path in paths.values():
     #print(path)
     draw.line([(xy[0]+w//2,xy[1]+h//2) for xy in path])
+"""
+
+img = img.resize((img.size[0]*2, img.size[1]*2))
 
 img.save(f"{int(time()*1000)}.png")
 img.show()

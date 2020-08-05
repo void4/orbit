@@ -1,5 +1,7 @@
 from copy import deepcopy
 from collections import defaultdict
+from math import pi
+from time import time
 
 G = 1
 
@@ -8,10 +10,15 @@ class Mass:
         self.x = x
         self.y = y
         self.z = z
+
         self.m = m
+        self.r = (m*3/4/pi)**0.3
+        print(self.r)
+
         self.vx = 0
         self.vy = 0
         self.vz = 0
+
         self.ax = 0
         self.ay = 0
         self.az = 0
@@ -25,6 +32,9 @@ class Mass:
 
     def gravity(self, b):
         dist = self.distance(b)
+        if dist < self.r + b.r or dist > 1000:
+            return
+
         dx = self.x-b.x
         dy = self.y-b.y
         dz = self.z-b.z
@@ -37,7 +47,11 @@ masses = [Mass(100, -100, 0, 0), Mass(100, 100, 0, 0)]
 masses[0].vy = 5
 masses[1].vy = -5
 
-steps = 100
+for x in range(-5, 5):
+    for y in range(-5, 5):
+        masses.append(Mass(5, x, y, 0))
+
+steps = 1000
 
 paths = defaultdict(list)
 
@@ -54,8 +68,6 @@ for step in range(steps):
             if mass == mass2:
                 continue
             nm.gravity(mass2)
-
-        print(nm.ix)
 
         nm.vx += nm.ax + nm.ix
         nm.vy += nm.ay + nm.iy
@@ -79,9 +91,10 @@ img = Image.new("RGB", (w,h))
 draw = ImageDraw.Draw(img)
 
 for path in paths.values():
-    print(path)
+    #print(path)
     draw.line([(xy[0]+w//2,xy[1]+h//2) for xy in path])
 
+img.save(f"{int(time()*1000)}.png")
 img.show()
 
 #print([[m.x, m.y, m.z] for m in masses])

@@ -62,7 +62,9 @@ class Mass:
         dx = b.x-self.x
         dy = b.y-self.y
         dz = b.z-self.z
-        force = G*self.m*b.m/dist**3
+
+        force = G*b.m/dist**3
+
         self.ax += force * dx
         self.ay += force * dy
         self.az += force * dz

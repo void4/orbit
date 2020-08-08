@@ -5,16 +5,16 @@ from time import time
 
 from PIL import Image, ImageDraw
 
-G = 1
+G = 100
 
-TIMEDELTA = 1
+TIMEDELTA = 1/2
 
-w = h = 32
+w = h = 256
 
 img = Image.new("RGB", (w,h))
 draw = ImageDraw.Draw(img)
 
-steps = 255
+steps = 255*2
 
 ID = 0#should never be 0 because of if checks
 
@@ -22,6 +22,23 @@ def nextid():
     global ID
     ID += 1
     return ID
+
+distanceCache = {}
+
+def distance(a, b):
+    global distanceCache
+
+    key = (a.id, b.id) if a.id < b.id else (b.id, a.id)
+
+    if key in distanceCache:
+        return distanceCache[key]
+
+    dist = ((a.x - b.x)**2 + (a.y - b.y)**2 + (a.z - b.z)**2)**0.5
+
+    distanceCache[key] = dist
+
+    return dist
+
 
 class Mass:
     def __init__(self, m, x, y, z):
@@ -36,7 +53,6 @@ class Mass:
 
         self.m = m
         self.r = (m*3/4/pi)**(1/3)
-        #print(self.r)
 
         self.vx = 0
         self.vy = 0
@@ -46,11 +62,9 @@ class Mass:
         self.ay = 0
         self.az = 0
 
-    def distance(self, b):
-        return ((self.x - b.x)**2 + (self.y - b.y)**2 + (self.z - b.z)**2)**0.5
 
     def gravity(self, b):
-        dist = self.distance(b)
+        dist = distance(self, b)
         if dist < self.r + b.r:
             self.status = b.id
             return
@@ -74,13 +88,14 @@ for x in range(-w//2, w//2):
     for y in range(-h//2, h//2):
 
         ID = 0
-        masses = [Mass(100, -50, 0, 0), Mass(100, 50, 0, 0)]
+        masses = [Mass(10, -50, 0, 0), Mass(10, 50, 0, 0)]
         masses[0].vy = 8
         masses[1].vy = -8
 
         masses.append(Mass(1, x, y, 0))
 
         for step in range(steps):
+            distanceCache = {}
             newmasses = []
             for mi, mass in enumerate(masses):
                 nm = deepcopy(mass)
